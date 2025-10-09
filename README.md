@@ -1,4 +1,4 @@
-# CDI Dev Mode
+# Dev Console - CDI Dev Mode
 
 This project is focused on providing tools and extension capabilities for Contexts and Dependency Injection (CDI) in development mode. It features probing, registry management, observer patterns, and REST API integrations to facilitate enhanced development and debugging capabilities for Jakarta EE applications.
 
@@ -34,6 +34,3 @@ Payara Dev Console is a comprehensive development utility for Jakarta EE applica
 
 
 
-Dependency Conflicts
-Dependency Graph
-plant umll diagram 

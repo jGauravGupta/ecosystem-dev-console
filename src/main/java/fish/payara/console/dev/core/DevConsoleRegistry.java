@@ -1,15 +1,56 @@
+/*
+ *
+ * Copyright (c) 2025 Payara Foundation and/or its affiliates. All rights reserved.
+ *
+ * The contents of this file are subject to the terms of either the GNU
+ * General Public License Version 2 only ("GPL") or the Common Development
+ * and Distribution License("CDDL") (collectively, the "License").  You
+ * may not use this file except in compliance with the License.  You can
+ * obtain a copy of the License at
+ * https://github.com/payara/Payara/blob/master/LICENSE.txt
+ * See the License for the specific
+ * language governing permissions and limitations under the License.
+ *
+ * When distributing the software, include this License Header Notice in each
+ * file and include the License file at glassfish/legal/LICENSE.txt.
+ *
+ * GPL Classpath Exception:
+ * The Payara Foundation designates this particular file as subject to the "Classpath"
+ * exception as provided by the Payara Foundation in the GPL Version 2 section of the License
+ * file that accompanied this code.
+ *
+ * Modifications:
+ * If applicable, add the following below the License Header, with the fields
+ * enclosed by brackets [] replaced by your own identifying information:
+ * "Portions Copyright [year] [name of copyright owner]"
+ *
+ * Contributor(s):
+ * If you wish your version of this file to be governed by only the CDDL or
+ * only the GPL Version 2, indicate your decision by adding "[Contributor]
+ * elects to include this software in this distribution under the [CDDL or GPL
+ * Version 2] license."  If you don't indicate a single choice of license, a
+ * recipient has the option to distribute your version of this file under
+ * either the CDDL, the GPL Version 2 or to extend the choice of license to
+ * its licensees as provided above.  However, if you add GPL Version 2 code
+ * and therefore, elected the GPL Version 2 license, then the option applies
+ * only if the new code is made subject to such option by the copyright
+ * holder.
+ */
 package fish.payara.console.dev.core;
 
 import fish.payara.console.dev.cdi.dto.BeanGraphDTO;
 import fish.payara.console.dev.rest.dto.DecoratorInfo;
+import fish.payara.console.dev.rest.dto.EventRecord;
 import fish.payara.console.dev.rest.dto.InterceptorInfo;
 import fish.payara.console.dev.rest.dto.ProducerInfo;
 import fish.payara.console.dev.rest.dto.RestMethodDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.spi.*;
 import java.lang.annotation.Annotation;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 @ApplicationScoped
 public class DevConsoleRegistry {
@@ -23,11 +64,16 @@ public class DevConsoleRegistry {
             = Boolean.parseBoolean(System.getProperty("payara.dev.console", "true"));
 
     private final Map<String, Bean<?>> beans = new ConcurrentHashMap<>();
+    private final Map<ObserverMethod<?>, String> observerMethodNames = new ConcurrentHashMap<>();
     private final List<ObserverMethod<?>> observers = Collections.synchronizedList(new ArrayList<>());
     private final Map<String, String> restExceptionMappers = Collections.synchronizedMap(new LinkedHashMap<>());
     private volatile BeanManager bm;
     private final Map<String, Set<Class<? extends Annotation>>> seenTypes = new ConcurrentHashMap<>();
     private final BeanGraphDTO beanGraph = new BeanGraphDTO();
+
+    // Event monitoring structures
+    private static final int DEFAULT_EVENT_HISTORY = 10000;
+    private final Deque<EventRecord> recentEvents = new ConcurrentLinkedDeque<>();
 
     public void addDecorator(AnnotatedType decorator) {
         decorators.add(DecoratorInfo.fromAnnotatedType(decorator));
@@ -163,8 +209,19 @@ public class DevConsoleRegistry {
         return restExceptionMappers;
     }
 
-    void registerObserver(ObserverMethod<?> om) {
+   /**
+     * Preferred register method used at ProcessObserverMethod time: supplies both the
+     * ObserverMethod and the AnnotatedMethod (if available) so we can remember the method name.
+     */
+    void registerObserver(ObserverMethod<?> om, jakarta.enterprise.inject.spi.AnnotatedMethod<?> annotatedMethod) {
         observers.add(om);
+        if (annotatedMethod != null && annotatedMethod.getJavaMember() != null) {
+            try {
+                observerMethodNames.put(om, annotatedMethod.getJavaMember().getName());
+            } catch (Throwable t) {
+                // defensive: some implementations may provide odd AnnotatedMethod instances
+            }
+        }
     }
 
     void finishModel(BeanManager bm) {
@@ -212,4 +269,60 @@ public class DevConsoleRegistry {
     public Map<jakarta.enterprise.inject.spi.AnnotatedMethod<?>, RestMethodDTO> getRestMethodInfoMap() {
         return restMethodInfoMap;
     }
+
+    /**
+     * Register a fired event into the in-memory history.  The caller (usually an observer bean) should compute
+     * the list of resolved observer method strings (bean#method) before calling this.
+     * @param eventType
+     * @param firedBy
+     * @param timestamp
+     * @param resolvedObservers
+     */
+    public void registerEvent(String eventType, String firedBy, Instant timestamp, List<String> resolvedObservers) {
+        EventRecord rec = new EventRecord(eventType, firedBy, timestamp, resolvedObservers);
+        recentEvents.addLast(rec);
+        // trim history
+        while (recentEvents.size() > DEFAULT_EVENT_HISTORY) {
+            recentEvents.removeFirst();
+        }
+    }
+
+    public List<EventRecord> getRecentEvents() {
+        return new ArrayList<>(recentEvents);
+    }
+
+    /**
+     * Resolve candidate observers for the given event type name using the observer registry collected during bootstrap.
+     * This performs a simple name-equality match; you may extend it to handle generics/assignability if required.
+     * @param eventTypeName
+     * @return 
+     */
+    public List<String> resolveObserversFor(String eventTypeName) {
+        List<String> matches = new ArrayList<>();
+        synchronized (observers) {
+            for (ObserverMethod<?> om : observers) {
+                java.lang.reflect.Type observedType = om.getObservedType();
+                String observedTypeName = observedType == null ? null : observedType.getTypeName();
+                if (eventTypeName.equals(observedTypeName)) {
+                    try {
+                        String beanClassName = om.getBeanClass() != null ? om.getBeanClass().getName() : null;
+                        String methodName = observerMethodNames.get(om); // use captured name if present
+                        if (beanClassName != null && methodName != null) {
+                            matches.add(beanClassName + "#" + methodName);
+                            continue;
+                        } else if (beanClassName != null) {
+                            // fallback to beanClass#<unknown>
+                            matches.add(beanClassName + "#<unknown>");
+                            continue;
+                        }
+                    } catch (Throwable t) {
+                        // ignore and fall-through to fallback
+                    }
+                    matches.add(om.toString());
+                }
+            }
+        }
+        return matches;
+    }
+
 }

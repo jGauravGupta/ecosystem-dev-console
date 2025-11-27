@@ -1,4 +1,16 @@
 function openPane(evt, tabName) {
+    const iframe = document.getElementById('dashboardIframe');
+    const contentArea = document.getElementById('contentArea');
+
+    // Show the dashboard iframe only when requested, otherwise hide it
+    if (tabName === 'CDIDevConsole') {
+        iframe.style.display = 'block';
+        contentArea.style.display ='none';
+    } else {
+        iframe.style.display = 'none';
+        contentArea.style.display ='block';
+    }
+
     const tabcontent = document.getElementsByClassName('tabcontent');
     for (const tab of tabcontent) {
         tab.style.display = 'none';
@@ -17,9 +29,12 @@ function openPane(evt, tabName) {
         activeTab.setAttribute('aria-hidden', 'false');
     }
 
-    evt.currentTarget.classList.add('active');
-    evt.currentTarget.setAttribute('aria-selected', 'true');
-    evt.currentTarget.focus();
+    if (evt && evt.currentTarget) {
+        evt.currentTarget.classList.add('active');
+        evt.currentTarget.setAttribute('aria-selected', 'true');
+        evt.currentTarget.focus();
+    }
+
     localStorage.setItem('activeTab', tabName);
 
     filterBeans();

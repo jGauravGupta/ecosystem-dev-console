@@ -1,16 +1,21 @@
-function openPane(evt, tabName) {
+function openPane(evt, tabName, id) {
     const iframe = document.getElementById('dashboardIframe');
     const contentArea = document.getElementById('contentArea');
  const iframeSources = {
         CDIDevConsole: "cdi-dashboard.html",
-        MetricsDashboard: "metrics-dashboard.html"
+        MetricsDashboard: "metrics-dashboard.html",
+        BeanConsole: "bean-dashboard.html"
     };
     // Show the dashboard iframe only when requested, otherwise hide it
-    if (tabName === 'CDIDevConsole' || tabName === 'MetricsDashboard') {
+    if (tabName === 'CDIDevConsole' || tabName === 'MetricsDashboard' || tabName === 'BeanConsole') {
         iframe.style.display = 'block';
         contentArea.style.display ='none';
          if (iframe.src !== iframeSources[tabName]) {
-            iframe.src = iframeSources[tabName];
+            if (tabName === 'BeanConsole') {
+                iframe.src = iframeSources[tabName] + "?bean=" + id;
+            } else {
+                iframe.src = iframeSources[tabName];
+            }
         }
     } else {
         iframe.style.display = 'none';

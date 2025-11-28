@@ -38,7 +38,9 @@
  */
 package fish.payara.console.dev.resources;
 
+import fish.payara.console.dev.cdi.demo.SampleSessionBean;
 import fish.payara.console.dev.dto.BeanDTO;
+import fish.payara.console.dev.dto.BeanFullDTO;
 import fish.payara.console.dev.dto.BeanGraphDTO;
 import fish.payara.console.dev.dto.SecurityAnnotationDTO;
 import fish.payara.console.dev.core.DevConsoleExtension;
@@ -80,12 +82,33 @@ public class DevConsoleResource {
 
     @Inject
     private BeanManager beanManager;
-    
+    @Inject
+    private SampleSessionBean sampleSessionBean;
+
     @GET
     @Path("/beans")
     public Object beans() {
         guard();
         return registry.getBeans().stream().map(BeanDTO::new).toList();
+    }
+
+    @GET
+    @Path("/beans/{id}")
+    public Response getBeanById(@PathParam("id") String id) {
+        guard();
+        sampleSessionBean.hello();
+        for (Bean<?> bean : registry.getBeans()) {
+            if (bean.getBeanClass().getName().equals(id)) {
+                BeanFullDTO dto = new BeanFullDTO(bean,
+                        registry.getStats(bean.getBeanClass()),
+                        registry.findProducerForBean(bean.getBeanClass())
+                                .map(info -> info.getMemberSignature())
+                                .orElse(null)
+                );
+                return Response.ok(dto).build();
+            }
+        }
+        throw new NotFoundException();
     }
 
     @GET
@@ -177,7 +200,6 @@ public class DevConsoleResource {
                         // defensive: if anything goes wrong, mark as unknown (null)
                         instancesForBean = null;
                     }
-
 
                     if (instancesForBean != null && instancesForBean > 0) {
                         scopeInstancesSum = scopeInstancesSum + instancesForBean;
@@ -310,6 +332,65 @@ public class DevConsoleResource {
     public BeanGraphDTO getBeanGraph() {
         return registry.getBeanGraph();
     }
+
+@GET
+@Path("/bean-graph/{id}")
+public Response getBeanGraphNodeById(@PathParam("id") String id) {
+    guard();
+
+    BeanGraphDTO graph = registry.getBeanGraph();
+    if (graph == null || graph.getNodes() == null) {
+        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity("Bean graph not available")
+                .build();
+    }
+
+    BeanGraphDTO.BeanNode root = graph.getNodes().get(id);
+    if (root == null) {
+        return Response.status(Response.Status.NOT_FOUND)
+                .entity("Bean with id '" + id + "' not found")
+                .build();
+    }
+
+    // Build a subgraph containing only this node + dependencies
+    Map<String, BeanGraphDTO.BeanNode> subgraphNodes = new LinkedHashMap<>();
+    collectRecursive(root, graph.getNodes(), subgraphNodes);
+
+    BeanGraphDTO subgraph = new BeanGraphDTO();
+
+    // add nodes without creating new objects
+    subgraphNodes.forEach((beanId, beanNode) -> {
+        subgraph.addNode(beanId, beanNode.getBeanType(), beanNode.getDescription());
+    });
+
+    // add edges
+    subgraphNodes.forEach((beanId, beanNode) -> {
+        for (BeanGraphDTO.BeanNode dep : beanNode.getDependencies()) {
+            if (subgraphNodes.containsKey(dep.getBeanId())) {
+                subgraph.addDependency(beanId, dep.getBeanId());
+            }
+        }
+    });
+
+    return Response.ok(subgraph).build();
+}
+private void collectRecursive(BeanGraphDTO.BeanNode node,
+                              Map<String, BeanGraphDTO.BeanNode> allNodes,
+                              Map<String, BeanGraphDTO.BeanNode> result) {
+
+    if (result.containsKey(node.getBeanId())) {
+        return; // already processed
+    }
+
+    // Add this node to result
+    result.put(node.getBeanId(), node);
+
+    // Now recursively add dependencies
+    for (BeanGraphDTO.BeanNode dep : node.getDependencies()) {
+        collectRecursive(dep, allNodes, result);
+    }
+}
+
 
     @GET
     @Path("/rest-resources")

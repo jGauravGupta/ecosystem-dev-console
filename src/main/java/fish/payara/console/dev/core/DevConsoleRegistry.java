@@ -196,9 +196,9 @@ public class DevConsoleRegistry {
     }
 
     void registerBean(Bean<?> bean) {
-        beans.put(bean.toString(), bean);
+        beans.put(bean.getBeanClass().getName(), bean);
         // Add bean as node in the graph
-        beanGraph.addNode(bean.toString(), bean.getBeanClass().getName(), bean.toString());
+        beanGraph.addNode(bean.getBeanClass().getName(), bean.getBeanClass().getName(), bean.toString());
     }
 
     private final Map<jakarta.enterprise.inject.spi.AnnotatedType<?>, String> restResourcePaths = new ConcurrentHashMap<>();
@@ -280,12 +280,12 @@ public class DevConsoleRegistry {
             return;
         }
         for (Bean<?> bean : beans.values()) {
-            String fromId = bean.toString();
+            String fromId = bean.getBeanClass().getName();
             // Check injection points
             for (InjectionPoint ip : bean.getInjectionPoints()) {
                 Bean<?> injectedBean = bm.resolve(bm.getBeans(ip.getType(), ip.getQualifiers().toArray(new Annotation[0])));
                 if (injectedBean != null) {
-                    String toId = injectedBean.toString();
+                    String toId = injectedBean.getBeanClass().getName();
                     beanGraph.addDependency(fromId, toId);
                 }
             }

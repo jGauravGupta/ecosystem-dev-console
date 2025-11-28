@@ -42,7 +42,7 @@ import jakarta.json.bind.annotation.JsonbTypeAdapter;
 import java.util.*;
 
 /**
- * Data Transfer Object representing a graph of bean dependencies.
+ * Data Transfer Object representing a graph of bean dependencies. 
  * Nodes represent beans, edges represent injection dependencies.
  */
 public class BeanGraphDTO {

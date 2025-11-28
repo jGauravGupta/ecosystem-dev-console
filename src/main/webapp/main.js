@@ -107,7 +107,6 @@ function renderBeans() {
                 return m.mapperClass.toLowerCase().includes(filter) || (m.exceptionType && m.exceptionType.toLowerCase().includes(filter));
             });
         } else if (type === 'Processed') {
-            debugger;
             filteredBeans = categorized[type].filter(bean => bean.toLowerCase().includes(filter));
         } else if (type === 'SeenTypes') {
             filteredBeans = categorized.SeenTypes.filter(bean => {
@@ -128,6 +127,7 @@ function renderBeans() {
         } else if (type === 'ScopedBeans') {
             categorized[type].forEach(bean => {
                 const tr = document.createElement('tr');
+                tr.onclick = (event) => openPane(event, 'BeanConsole', bean.beanClass);
                 const qualifiers = Array.isArray(bean.qualifiers) ? bean.qualifiers.join(', ') : '';
                 const types = Array.isArray(bean.types) ? bean.types.join(', ') : '';
                 tr.innerHTML = `
@@ -152,6 +152,7 @@ function renderBeans() {
             filteredBeans.forEach(bean => {
                 const p = parseBeanDTO(bean);
                 const tr = document.createElement('tr');
+                tr.onclick = (event) => openPane(event, 'BeanConsole', bean.className);
                 const interceptorBindings = Array.isArray(bean.interceptorBindings) ? bean.interceptorBindings.join(', ') : '';
                 tr.innerHTML = `
                                 <td>${highlight(bean.className || '', filter)}</td>
@@ -163,6 +164,7 @@ function renderBeans() {
             filteredBeans = categorized[type].filter(p => JSON.stringify(p).toLowerCase().includes(filter));
             filteredBeans.forEach(bean => {
                 const tr = document.createElement('tr');
+                tr.onclick = (event) => openPane(event, 'BeanConsole', bean.producerClass);
                 tr.innerHTML = `
                                 <td>${highlight(bean.producerClass || '', filter)}</td>
                                 <td>${highlight(bean.producedType || '', filter)}</td>
@@ -181,7 +183,7 @@ function renderBeans() {
                     scopeDisplay = 'Dependent';
                 }
                 const tr = document.createElement('tr');
-                /* Render each column for interceptor as requested */
+                tr.onclick = (event) => openPane(event, 'BeanConsole', bean.className);
                 tr.innerHTML = `
                                 <td>${highlight(bean.className || '', filter)}</td>
                                 <td>${highlight((bean.interceptorBindings || []).join(', '), filter)}</td>
@@ -197,7 +199,7 @@ function renderBeans() {
                     scopeDisplay = 'Dependent';
                 }
                 const tr = document.createElement('tr');
-                /* Render each column for decorator as requested */
+                tr.onclick = (event) => openPane(event, 'BeanConsole', bean.className);
                 tr.innerHTML = `
                                 <td>${highlight(bean.className || '', filter)}</td>
                                 <td>${highlight(bean.delegateType || '', filter)}</td>

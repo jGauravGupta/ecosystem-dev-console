@@ -35,54 +35,62 @@
  * and therefore, elected the GPL Version 2 license, then the option applies
  * only if the new code is made subject to such option by the copyright
  * holder.
- */
-package fish.payara.console.dev.rest.dto;
+ */        
+package fish.payara.console.dev.dto;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
+import jakarta.json.bind.annotation.JsonbTypeAdapter;
+import java.util.*;
 
 /**
- *
- * @author Gaurav Gupta
+ * Data Transfer Object representing a graph of bean dependencies.
+ * Nodes represent beans, edges represent injection dependencies.
  */
-public class InstanceStats {
+public class BeanGraphDTO {
+    private Map<String, BeanNode> nodes = new HashMap<>();
 
-    private final AtomicInteger currentCount = new AtomicInteger();
-    private final AtomicInteger createdCount = new AtomicInteger();
-    private final AtomicInteger maxCount = new AtomicInteger();
-    private final AtomicInteger destroyedCount = new AtomicInteger();
-    private final AtomicReference<Instant> lastCreated = new AtomicReference<>(null);
-    private final List<Record> creationRecords = new CopyOnWriteArrayList<>();
-    private final List<Record> destructionRecords = new CopyOnWriteArrayList<>();
-
-    public AtomicInteger getCurrentCount() {
-        return currentCount;
+    public void addNode(String beanId, String beanType, String description) {
+        nodes.putIfAbsent(beanId, new BeanNode(beanId, beanType, description));
     }
 
-    public AtomicInteger getMaxCount() {
-        return maxCount;
+    public void addDependency(String fromBeanId, String toBeanId) {
+        BeanNode fromNode = nodes.get(fromBeanId);
+        BeanNode toNode = nodes.get(toBeanId);
+        if(fromNode != null && toNode != null) {
+            fromNode.dependencies.add(toNode);
+        }
     }
 
-    public AtomicInteger getDestroyedCount() {
-        return destroyedCount;
+    public Map<String, BeanNode> getNodes() {
+        return nodes;
     }
 
-    public AtomicInteger getCreatedCount() {
-        return createdCount;
-    }
+    @JsonbTypeAdapter(BeanNodeAdapter.class)
+    public static class BeanNode {
+        private String beanId;
+        private String beanType;
+        private String description;
+        private List<BeanNode> dependencies = new ArrayList<>();
 
-    public AtomicReference<Instant> getLastCreated() {
-        return lastCreated;
-    }
+        public BeanNode(String beanId, String beanType, String description) {
+            this.beanId = beanId;
+            this.beanType = beanType;
+            this.description = description;
+        }
 
-    public List<Record> getCreationRecords() {
-        return creationRecords;
-    }
+        public String getBeanId() {
+            return beanId;
+        }
 
-    public List<Record> getDestructionRecords() {
-        return destructionRecords;
+        public String getBeanType() {
+            return beanType;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public List<BeanNode> getDependencies() {
+            return dependencies;
+        }
     }
 }

@@ -36,48 +36,35 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.rest.dto;
+package fish.payara.console.dev.dto;
 
-import java.util.List;
+import java.lang.annotation.Annotation;
+import java.util.Set;
 
-/**
- * Represents a CDI observer method’s metadata for /dev/cdi/observers.
- * @author Gaurav Gupta
- */
-public class ObserverDTO {
+public class SecurityAnnotationDTO {
+    private String key;
+    private Set<String> annotationClassNames;
 
-    private final String eventTypeName;
-    private final String beanClass;
-    private final List<String> qualifiers;
-    private final String transactionPhase;
-    private final String reception;
-
-    public ObserverDTO(String observedType, String beanClass,
-                             List<String> qualifiers, String transactionPhase, String reception) {
-        this.eventTypeName = observedType;
-        this.beanClass = beanClass;
-        this.qualifiers = qualifiers;
-        this.transactionPhase = transactionPhase;
-        this.reception = reception;
+    public SecurityAnnotationDTO(String key, Set<Annotation> annotations) {
+        this.key = key;
+        this.annotationClassNames = annotations.stream()
+                .map(annotation -> annotation.annotationType().getName())
+                .collect(java.util.stream.Collectors.toSet());
     }
 
-    public String getEventTypeName() {
-        return eventTypeName;
+    public String getKey() {
+        return key;
     }
 
-    public String getBeanClass() {
-        return beanClass;
+    public void setKey(String key) {
+        this.key = key;
     }
 
-    public List<String> getQualifiers() {
-        return qualifiers;
+    public Set<String> getAnnotationClassNames() {
+        return annotationClassNames;
     }
 
-    public String getTransactionPhase() {
-        return transactionPhase;
-    }
-
-    public String getReception() {
-        return reception;
+    public void setAnnotationClassNames(Set<String> annotationClassNames) {
+        this.annotationClassNames = annotationClassNames;
     }
 }

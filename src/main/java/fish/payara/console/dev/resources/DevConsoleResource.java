@@ -38,22 +38,22 @@
  */
 package fish.payara.console.dev.resources;
 
-import fish.payara.console.dev.cdi.dto.BeanDTO;
-import fish.payara.console.dev.cdi.dto.BeanGraphDTO;
-import fish.payara.console.dev.cdi.dto.SecurityAnnotationDTO;
+import fish.payara.console.dev.dto.BeanDTO;
+import fish.payara.console.dev.dto.BeanGraphDTO;
+import fish.payara.console.dev.dto.SecurityAnnotationDTO;
 import fish.payara.console.dev.core.DevConsoleExtension;
 import fish.payara.console.dev.core.DevConsoleRegistry;
-import fish.payara.console.dev.rest.dto.InstanceStats;
-import fish.payara.console.dev.rest.dto.DecoratorInfo;
-import fish.payara.console.dev.rest.dto.EventDTO;
-import fish.payara.console.dev.rest.dto.InterceptedClassInfo;
-import fish.payara.console.dev.rest.dto.InterceptorInfo;
-import fish.payara.console.dev.rest.dto.ObserverDTO;
-import fish.payara.console.dev.rest.dto.ProducerDTO;
-import fish.payara.console.dev.rest.dto.ProducerInfo;
-import fish.payara.console.dev.rest.dto.RestMethodDTO;
-import fish.payara.console.dev.rest.dto.RestResourceDTO;
-import fish.payara.console.dev.rest.dto.ScopedBeanInfo;
+import fish.payara.console.dev.model.InstanceStats;
+import fish.payara.console.dev.model.DecoratorInfo;
+import fish.payara.console.dev.dto.EventDTO;
+import fish.payara.console.dev.model.InterceptorInfo;
+import fish.payara.console.dev.dto.ObserverDTO;
+import fish.payara.console.dev.dto.ProducerDTO;
+import fish.payara.console.dev.model.ProducerInfo;
+import fish.payara.console.dev.dto.RestMethodDTO;
+import fish.payara.console.dev.dto.RestResourceDTO;
+import fish.payara.console.dev.model.InterceptedClassInfo;
+import fish.payara.console.dev.model.ScopedBeanInfo;
 import jakarta.enterprise.context.ContextNotActiveException;
 import jakarta.enterprise.context.spi.Context;
 import jakarta.enterprise.context.spi.Contextual;
@@ -67,11 +67,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Path("/dev")

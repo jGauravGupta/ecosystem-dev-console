@@ -36,39 +36,53 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.rest.dto;
+package fish.payara.console.dev.model;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *
  * @author Gaurav Gupta
  */
+public class InstanceStats {
 
-public class ProducerDTO {
+    private final AtomicInteger currentCount = new AtomicInteger();
+    private final AtomicInteger createdCount = new AtomicInteger();
+    private final AtomicInteger maxCount = new AtomicInteger();
+    private final AtomicInteger destroyedCount = new AtomicInteger();
+    private final AtomicReference<Instant> lastCreated = new AtomicReference<>(null);
+    private final List<Record> creationRecords = new CopyOnWriteArrayList<>();
+    private final List<Record> destructionRecords = new CopyOnWriteArrayList<>();
 
-    private final String producerClass;    
-    private final String memberSignature;
-    private final String producedType;
-    private final String kind; // FIELD or METHOD
-    private final int producedCount; // how many beans of that type currently exist
-    private final Instant lastProduced;
-
-
-    public ProducerDTO(ProducerInfo info) {
-        this.producerClass = info.getProducerClass();
-        this.memberSignature = info.getMemberSignature();
-        this.producedType = info.getProducedType();
-        this.kind = info.getKind().name();
-        this.producedCount = info.getproducedCount();
-        this.lastProduced = info.getLastProduced();
+    public AtomicInteger getCurrentCount() {
+        return currentCount;
     }
 
-    // getters
-    public String getProducerClass() { return producerClass; }
-    public String getMemberSignature() { return memberSignature; }
-    public String getProducedType() { return producedType; }
-    public String getKind() { return kind; }
-    public int getproducedCount() { return producedCount; }
-    public Instant getLastProduced() { return lastProduced; }
+    public AtomicInteger getMaxCount() {
+        return maxCount;
+    }
+
+    public AtomicInteger getDestroyedCount() {
+        return destroyedCount;
+    }
+
+    public AtomicInteger getCreatedCount() {
+        return createdCount;
+    }
+
+    public AtomicReference<Instant> getLastCreated() {
+        return lastCreated;
+    }
+
+    public List<Record> getCreationRecords() {
+        return creationRecords;
+    }
+
+    public List<Record> getDestructionRecords() {
+        return destructionRecords;
+    }
 }

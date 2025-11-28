@@ -38,7 +38,7 @@
  */
 package fish.payara.console.dev.core;
 
-import fish.payara.console.dev.rest.dto.ProducerInfo;
+import fish.payara.console.dev.model.ProducerInfo;
 import jakarta.enterprise.context.spi.CreationalContext;
 import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.inject.spi.*;

@@ -36,43 +36,32 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.rest.dto;
+package fish.payara.console.dev.dto;
 
-import java.time.Instant;
-import java.util.List;
+public class RestResourceDTO {
+    private String className;
+    private String path;
 
-/**
- * Represents a fired CDI event for /dev/cdi/events.
- * @author Gaurav Gupta
- */
-public class EventDTO {
+    public RestResourceDTO() {}
 
-    private final String eventType;
-    private final String firedBy;
-    private final Instant timestamp;
-    private final List<String> notifiedObservers;
-
-    public EventDTO(String eventType, String firedBy,
-                          Instant timestamp, List<String> notifiedObservers) {
-        this.eventType = eventType;
-        this.firedBy = firedBy;
-        this.timestamp = timestamp;
-        this.notifiedObservers = notifiedObservers;
+    public RestResourceDTO(String className, String path) {
+        this.className = className;
+        this.path = path;
     }
 
-    public String getEventType() {
-        return eventType;
+    public String getClassName() {
+        return className;
     }
 
-    public String getFiredBy() {
-        return firedBy;
+    public void setClassName(String className) {
+        this.className = className;
     }
 
-    public Instant getTimestamp() {
-        return timestamp;
+    public String getPath() {
+        return path;
     }
 
-    public List<String> getNotifiedObservers() {
-        return notifiedObservers;
+    public void setPath(String path) {
+        this.path = path;
     }
 }

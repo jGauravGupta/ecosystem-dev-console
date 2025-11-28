@@ -36,53 +36,42 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.rest.dto;
+package fish.payara.console.dev.dto;
 
-import java.time.Instant;
-import java.util.Collections;
-import java.util.List;
+public class RestMethodDTO {
+    private String methodSignature;
+    private String path;
+    private String httpMethodAndProduces; 
 
-/**
- *
- * @author Gaurav Gupta
- */
-public class EventRecord {
+    public RestMethodDTO() {}
 
-    private final String eventType;
-    private final String firedBy;
-    private final Instant timestamp;
-    private final List<String> resolvedObservers;
-
-    public EventRecord(String eventType, String firedBy, Instant timestamp, List<String> resolvedObservers) {
-        this.eventType = eventType;
-        this.firedBy = firedBy;
-        this.timestamp = timestamp;
-        this.resolvedObservers = resolvedObservers == null ? Collections.emptyList() : List.copyOf(resolvedObservers);
+    public RestMethodDTO(String methodSignature, String path, String httpMethodAndProduces) {
+        this.methodSignature = methodSignature;
+        this.path = path;
+        this.httpMethodAndProduces = httpMethodAndProduces;
     }
 
-    public String getEventType() {
-        return eventType;
+    public String getMethodSignature() {
+        return methodSignature;
     }
 
-    public String getFiredBy() {
-        return firedBy;
+    public void setMethodSignature(String methodSignature) {
+        this.methodSignature = methodSignature;
     }
 
-    public Instant getTimestamp() {
-        return timestamp;
+    public String getPath() {
+        return path;
     }
 
-    public List<String> getResolvedObservers() {
-        return resolvedObservers;
+    public String getHttpMethodAndProduces() {
+        return httpMethodAndProduces;
     }
 
-    @Override
-    public String toString() {
-        return "EventRecord{"
-                + "eventType='" + eventType + '\''
-                + ", firedBy='" + firedBy + '\''
-                + ", timestamp=" + timestamp
-                + ", resolvedObservers=" + resolvedObservers
-                + '}';
+    public void setPath(String path) {
+        this.path = path;
+    }
+
+    public void setHttpMethodAndProduces(String httpMethodAndProduces) {
+        this.httpMethodAndProduces = httpMethodAndProduces;
     }
 }

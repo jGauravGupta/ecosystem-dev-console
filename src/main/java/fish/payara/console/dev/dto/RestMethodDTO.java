@@ -36,32 +36,38 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.cdi.demo;
+package fish.payara.console.dev.dto;
 
-import jakarta.ejb.Schedule;
-import jakarta.ejb.Singleton;
-import jakarta.ejb.Startup;
-import jakarta.enterprise.event.Event;
-import jakarta.inject.Inject;
-import java.time.LocalTime;
+public class RestMethodDTO {
+    private final String methodSignature;
+    private final String path;
+    private final String httpMethodAndProduces;
+    private int invoked;
 
-/**
- * Periodically fires CDI events every second for testing the event system.
- */
-@Singleton
-@Startup
-public class HeartbeatTimer {
-
-    @Inject
-    private Event<String> messageEvent;
-
-    
-    @Inject
-    @Fast
-    String fastMessage;  
-    
-    @Schedule(second = "*/30", minute = "*", hour = "*", persistent = false)
-    public void sendMessage() {
-        messageEvent.fire("HeartBeat " + LocalTime.now() + " - "+ fastMessage);
+    public RestMethodDTO(String methodSignature, String path, String httpMethodAndProduces) {
+        this.methodSignature = methodSignature;
+        this.path = path;
+        this.httpMethodAndProduces = httpMethodAndProduces;
     }
+
+    public String getMethodSignature() {
+        return methodSignature;
+    }
+
+    public String getPath() {
+        return path;
+    }
+
+    public String getHttpMethodAndProduces() {
+        return httpMethodAndProduces;
+    }
+
+    public int getInvoked() {
+        return invoked;
+    }
+
+    public void setInvoked(int invoked) {
+        this.invoked = invoked;
+    }
+    
 }

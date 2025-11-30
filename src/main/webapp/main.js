@@ -87,7 +87,7 @@ function parseRestExceptionMapper(bean) {
 function parseBeanDTO(bean) {
     return {
         type: bean.scope ? bean.scope.substring(bean.scope.lastIndexOf('.') + 1) : '',
-        className: bean.beanClass || bean.className || ''
+        className: bean.className || ''
     };
 }
 
@@ -102,7 +102,6 @@ function renderBeans() {
         let filteredBeans = [];
 
         if (type === 'RestExceptionMappers') {
-            debugger;
             filteredBeans = categorized.RestExceptionMappers.filter(mapping => {
                 const m = parseRestExceptionMapper(mapping);
                 return m.mapperClass.toLowerCase().includes(filter) || (m.exceptionType && m.exceptionType.toLowerCase().includes(filter));
@@ -128,11 +127,17 @@ function renderBeans() {
         } else if (type === 'ScopedBeans') {
             categorized[type].forEach(bean => {
                 const tr = document.createElement('tr');
+                tr.onclick = (event) => openPane(event, 'BeanConsole', bean.className);
                 const qualifiers = Array.isArray(bean.qualifiers) ? bean.qualifiers.join(', ') : '';
                 const types = Array.isArray(bean.types) ? bean.types.join(', ') : '';
                 tr.innerHTML = `
                                 <td>${highlight(bean.scope ? bean.scope.substring(bean.scope.lastIndexOf('.') + 1) : '', filter)}</td>
-                                <td>${highlight(bean.beanClass || '', filter)}</td>
+                                <td>${highlight(bean.currentCount || '', filter)}</td>
+                                <td>${highlight(bean.createdCount || '', filter)}</td>
+                                <td>${highlight(bean.lastCreated || '', filter)}</td>
+                                <td>${highlight(bean.maxCount || '', filter)}</td>
+                                <td>${highlight(bean.destroyedCount || '', filter)}</td>
+                                <td>${highlight(bean.className || '', filter)}</td>
                                 <td>${highlight(types, filter)}</td>
                                 <td>${highlight(bean.name || '', filter)}</td>
                                 <td>${highlight(qualifiers, filter)}</td>
@@ -147,6 +152,7 @@ function renderBeans() {
             filteredBeans.forEach(bean => {
                 const p = parseBeanDTO(bean);
                 const tr = document.createElement('tr');
+                tr.onclick = (event) => openPane(event, 'BeanConsole', bean.className);
                 const interceptorBindings = Array.isArray(bean.interceptorBindings) ? bean.interceptorBindings.join(', ') : '';
                 tr.innerHTML = `
                                 <td>${highlight(bean.className || '', filter)}</td>
@@ -158,8 +164,9 @@ function renderBeans() {
             filteredBeans = categorized[type].filter(p => JSON.stringify(p).toLowerCase().includes(filter));
             filteredBeans.forEach(bean => {
                 const tr = document.createElement('tr');
+                tr.onclick = (event) => openPane(event, 'BeanConsole', bean.className);
                 tr.innerHTML = `
-                                <td>${highlight(bean.producerClass || '', filter)}</td>
+                                <td>${highlight(bean.className || '', filter)}</td>
                                 <td>${highlight(bean.producedType || '', filter)}</td>
                                 <td>${highlight(bean.kind || '', filter)}</td>
                                 <td>${highlight(bean.memberSignature || '', filter)}</td>
@@ -176,7 +183,7 @@ function renderBeans() {
                     scopeDisplay = 'Dependent';
                 }
                 const tr = document.createElement('tr');
-                /* Render each column for interceptor as requested */
+                tr.onclick = (event) => openPane(event, 'BeanConsole', bean.className);
                 tr.innerHTML = `
                                 <td>${highlight(bean.className || '', filter)}</td>
                                 <td>${highlight((bean.interceptorBindings || []).join(', '), filter)}</td>
@@ -192,7 +199,7 @@ function renderBeans() {
                     scopeDisplay = 'Dependent';
                 }
                 const tr = document.createElement('tr');
-                /* Render each column for decorator as requested */
+                tr.onclick = (event) => openPane(event, 'BeanConsole', bean.className);
                 tr.innerHTML = `
                                 <td>${highlight(bean.className || '', filter)}</td>
                                 <td>${highlight(bean.delegateType || '', filter)}</td>
@@ -207,7 +214,6 @@ function renderBeans() {
                 tbody.appendChild(tr);
             });
         } else if (type === 'Events') {
-            debugger;
             filteredBeans = events.filter(event => {
                 return event.eventType.toLowerCase().includes(filter) ||
                         event.firedBy.toLowerCase().includes(filter) ||
@@ -216,7 +222,7 @@ function renderBeans() {
         } else {
             filteredBeans = observerEvents.filter(event => {
                 return event.eventTypeName.toLowerCase().includes(filter) ||
-                        event.beanClass.toLowerCase().includes(filter) ||
+                        event.className.toLowerCase().includes(filter) ||
                         event.reception.toLowerCase().includes(filter) ||
                         event.transactionPhase.toLowerCase().includes(filter);
             });
@@ -234,8 +240,8 @@ function renderBeans() {
                             bVal = b.eventTypeName;
                             break;
                         case 1:
-                            aVal = a.beanClass;
-                            bVal = b.beanClass;
+                            aVal = a.className;
+                            bVal = b.className;
                             break;
                         case 2:
                             aVal = a.reception;
@@ -344,7 +350,7 @@ function renderBeans() {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                                 <td>${highlight(bean.eventTypeName, filter)}</td>
-                                <td>${highlight(bean.beanClass, filter)}</td>
+                                <td>${highlight(bean.className, filter)}</td>
                                 <td>${highlight(bean.reception, filter)}</td>
                                 <td>${highlight(bean.transactionPhase, filter)}</td>`;
                 tbody.appendChild(tr);
@@ -379,17 +385,6 @@ function renderBeans() {
                 const tr = document.createElement('tr');
                 if (bean.className || bean.path) {
                     tr.innerHTML = `<td>${highlight(bean.className || '', filter)}</td><td>${highlight(bean.path || '', filter)}</td>`;
-                } else {
-                    tr.innerHTML = `<td>${highlight(bean, filter)}</td><td></td>`;
-                }
-                tbody.appendChild(tr);
-            }
-        });
-        restMethods.forEach(bean => {
-            if (type === 'RestMethods') {
-                const tr = document.createElement('tr');
-                if (bean.methodSignature || bean.path || bean.httpMethodAndProduces) {
-                    tr.innerHTML = `<td>${highlight(bean.methodSignature || '', filter)}</td><td>${highlight(bean.path || '', filter)}</td><td>${highlight(bean.httpMethodAndProduces || '', filter)}</td>`;
                 } else {
                     tr.innerHTML = `<td>${highlight(bean, filter)}</td><td></td>`;
                 }

@@ -36,32 +36,37 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.cdi.demo;
+package fish.payara.console.dev.model;
 
-import jakarta.ejb.Schedule;
-import jakarta.ejb.Singleton;
-import jakarta.ejb.Startup;
-import jakarta.enterprise.event.Event;
-import jakarta.inject.Inject;
-import java.time.LocalTime;
+import java.time.Instant;
 
 /**
- * Periodically fires CDI events every second for testing the event system.
+ *
+ * @author Gaurav Gupta
  */
-@Singleton
-@Startup
-public class HeartbeatTimer {
+public class HTTPRecord extends Record {
 
-    @Inject
-    private Event<String> messageEvent;
+    private final int status;          // HTTP response code
+    private final int requestSize;     // bytes
+    private final int responseSize;    // bytes
 
-    
-    @Inject
-    @Fast
-    String fastMessage;  
-    
-    @Schedule(second = "*/30", minute = "*", hour = "*", persistent = false)
-    public void sendMessage() {
-        messageEvent.fire("HeartBeat " + LocalTime.now() + " - "+ fastMessage);
+    public HTTPRecord(Instant timestamp, long durationMs, int status, int requestSize, int responseSize) {
+        super(timestamp, durationMs);
+        this.status = status;
+        this.requestSize = requestSize;
+        this.responseSize = responseSize;
     }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public int getRequestSize() {
+        return requestSize;
+    }
+
+    public int getResponseSize() {
+        return responseSize;
+    }
+
 }

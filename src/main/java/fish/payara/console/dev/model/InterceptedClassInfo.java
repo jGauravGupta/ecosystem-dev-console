@@ -36,32 +36,62 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.cdi.demo;
+package fish.payara.console.dev.model;
 
-import jakarta.ejb.Schedule;
-import jakarta.ejb.Singleton;
-import jakarta.ejb.Startup;
-import jakarta.enterprise.event.Event;
-import jakarta.inject.Inject;
-import java.time.LocalTime;
+import jakarta.enterprise.inject.spi.Bean;
+import jakarta.interceptor.InterceptorBinding;
 
-/**
- * Periodically fires CDI events every second for testing the event system.
- */
-@Singleton
-@Startup
-public class HeartbeatTimer {
+import java.lang.annotation.Annotation;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-    @Inject
-    private Event<String> messageEvent;
+public class InterceptedClassInfo extends BeanInfo {
 
-    
-    @Inject
-    @Fast
-    String fastMessage;  
-    
-    @Schedule(second = "*/30", minute = "*", hour = "*", persistent = false)
-    public void sendMessage() {
-        messageEvent.fire("HeartBeat " + LocalTime.now() + " - "+ fastMessage);
+    private final Set<String> interceptorBindings;
+
+    public InterceptedClassInfo(Bean<?> bean) {
+        super(bean.getBeanClass().getName());
+
+        this.interceptorBindings = findInterceptorBindings(bean.getBeanClass())
+                .map(InterceptedClassInfo::formatAnnotation)
+                .collect(Collectors.toSet());
+    }
+
+    private static Stream<Annotation> findInterceptorBindings(Class<?> beanClass) {
+        // all annotations directly on the bean class
+        return Stream.of(beanClass.getAnnotations())
+                .filter(a -> a.annotationType().isAnnotationPresent(InterceptorBinding.class));
+    }
+
+    private static String formatAnnotation(Annotation a) {
+        var type = a.annotationType();
+        if (type.getDeclaredMethods().length == 0) {
+            // marker binding
+            return "@" + type.getSimpleName();
+        }
+
+        // show short annotation with its values
+        String values = Stream.of(type.getDeclaredMethods())
+                .map(m -> {
+                    try {
+                        Object val = m.invoke(a);
+                        return m.getName() + "=" + String.valueOf(val);
+                    } catch (Exception e) {
+                        return m.getName() + "=<error>";
+                    }
+                })
+                .collect(Collectors.joining(", "));
+
+        return "@" + type.getSimpleName() + "(" + values + ")";
+    }
+
+    public Set<String> getInterceptorBindings() {
+        return interceptorBindings;
+    }
+
+    @Override
+    public String toString() {
+        return className + " -> " + interceptorBindings;
     }
 }

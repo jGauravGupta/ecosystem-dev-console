@@ -38,21 +38,29 @@
  */
 package fish.payara.console.dev.resources;
 
-import fish.payara.console.dev.cdi.dto.BeanDTO;
-import fish.payara.console.dev.cdi.dto.BeanGraphDTO;
-import fish.payara.console.dev.cdi.dto.SecurityAnnotationDTO;
+import fish.payara.console.dev.cdi.demo.SampleSessionBean;
+import fish.payara.console.dev.dto.BeanDTO;
+import fish.payara.console.dev.dto.BeanFullDTO;
+import fish.payara.console.dev.dto.BeanGraphDTO;
+import fish.payara.console.dev.dto.SecurityAnnotationDTO;
 import fish.payara.console.dev.core.DevConsoleExtension;
 import fish.payara.console.dev.core.DevConsoleRegistry;
-import fish.payara.console.dev.rest.dto.DecoratorInfo;
-import fish.payara.console.dev.rest.dto.EventDTO;
-import fish.payara.console.dev.rest.dto.InterceptedClassInfo;
-import fish.payara.console.dev.rest.dto.InterceptorInfo;
-import fish.payara.console.dev.rest.dto.ObserverDTO;
-import fish.payara.console.dev.rest.dto.ProducerDTO;
-import fish.payara.console.dev.rest.dto.ProducerInfo;
-import fish.payara.console.dev.rest.dto.RestMethodDTO;
-import fish.payara.console.dev.rest.dto.RestResourceDTO;
-import fish.payara.console.dev.rest.dto.ScopedBeanInfo;
+import fish.payara.console.dev.model.InstanceStats;
+import fish.payara.console.dev.model.DecoratorInfo;
+import fish.payara.console.dev.dto.EventDTO;
+import fish.payara.console.dev.model.InterceptorInfo;
+import fish.payara.console.dev.dto.ObserverDTO;
+import fish.payara.console.dev.dto.ProducerDTO;
+import fish.payara.console.dev.model.ProducerInfo;
+import fish.payara.console.dev.dto.RestMethodDTO;
+import fish.payara.console.dev.dto.RestResourceDTO;
+import fish.payara.console.dev.model.HTTPRecord;
+import fish.payara.console.dev.model.InterceptedClassInfo;
+import fish.payara.console.dev.model.ScopedBeanInfo;
+import fish.payara.console.dev.rest.RestMetricsRegistry;
+import jakarta.enterprise.context.ContextNotActiveException;
+import jakarta.enterprise.context.spi.Context;
+import jakarta.enterprise.context.spi.Contextual;
 import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.BeanManager;
 import jakarta.enterprise.inject.spi.Extension;
@@ -63,17 +71,21 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Path("/dev")
 @Produces(MediaType.APPLICATION_JSON)
 public class DevConsoleResource {
 
-    DevConsoleRegistry registry = DevConsoleExtension.registry;
+    private DevConsoleRegistry registry = DevConsoleExtension.registry;
+
+    @Inject
+    private BeanManager beanManager;
+    @Inject
+    private SampleSessionBean sampleSessionBean;
 
     @GET
     @Path("/beans")
@@ -83,44 +95,130 @@ public class DevConsoleResource {
     }
 
     @GET
+    @Path("/beans/{id}")
+    public Response getBeanById(@PathParam("id") String id) {
+        guard();
+        sampleSessionBean.hello();
+        for (Bean<?> bean : registry.getBeans()) {
+            if (bean.getBeanClass().getName().equals(id)) {
+                BeanFullDTO dto = new BeanFullDTO(bean,
+                        registry.getStats(bean.getBeanClass()),
+                        registry.findProducerForBean(bean.getBeanClass())
+                                .map(info -> info.getMemberSignature())
+                                .orElse(null)
+                );
+                return Response.ok(dto).build();
+            }
+        }
+        throw new NotFoundException();
+    }
+
+    @GET
     @Path("/scoped-beans")
     public List<ScopedBeanInfo> scopedBeans() {
         guard();
 
-        Set<String> seenKeys = new HashSet<>();
         return registry.getBeans().stream()
-                .filter(bean -> {
-                    var scope = bean.getScope();
-                    return scope != null && (scope.equals(jakarta.inject.Singleton.class)
-                            || scope.isAnnotationPresent(jakarta.enterprise.context.NormalScope.class));
-                })
-                .map(bean -> new ScopedBeanInfo(bean, registry.findProducerForBean(bean.getBeanClass())
-                .map(ProducerInfo::getMemberSignature)
-                .orElse(null)))
-                .filter(beanInfo -> {
-                    String key = beanInfo.getBeanClass() + "#" + beanInfo.getScope() + "#" + beanInfo.getName();
-                    if (seenKeys.contains(key)) {
-                        return false; // skip duplicate
-                    } else {
-                        seenKeys.add(key);
-                        return true;
-                    }
+                .map(bean -> {
+
+                    var info = new ScopedBeanInfo(bean,
+                            registry.findProducerForBean(bean.getBeanClass())
+                                    .map(ProducerInfo::getMemberSignature)
+                                    .orElse(null));
+
+                    InstanceStats stats
+                            = registry.getStats(bean.getBeanClass());
+
+                    info.setCreatedCount(stats.getCreatedCount().get());
+                    info.setLastCreated(stats.getLastCreated().get());
+                    info.setCurrentCount(stats.getCurrentCount().get());
+                    info.setMaxCount(stats.getMaxCount().get());
+                    info.setDestroyedCount(stats.getDestroyedCount().get());
+
+                    return info;
                 })
                 .toList();
     }
 
-    @Inject
-BeanManager beanManager;
+    @GET
+    @Path("/scoped-beans-detail")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response scopedBeansDetailed() {
+        guard();
 
-private int countBeansByType(String typeName) {
-    try {
-        Class<?> clazz = Class.forName(typeName);
-        Set<Bean<?>> beans = beanManager.getBeans(clazz);
-        return beans.size();
-    } catch (ClassNotFoundException e) {
-        return 0;
+        // Group beans by declared scope (treat null as Dependent)
+        Map<Class<? extends Annotation>, List<Bean<?>>> beansByScope = registry.getBeans().stream()
+                .collect(Collectors.groupingBy(b -> {
+                    Class<? extends Annotation> sc = b.getScope();
+                    return sc != null ? sc : jakarta.enterprise.context.Dependent.class;
+                }));
+
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        for (Map.Entry<Class<? extends Annotation>, List<Bean<?>>> e : beansByScope.entrySet()) {
+            Class<? extends Annotation> scopeClass = e.getKey();
+
+            // Skip Dependent scope if you don't want to report it (change as desired)
+            if (scopeClass == jakarta.enterprise.context.Dependent.class) {
+                continue;
+            }
+
+            String scopeKey = "@" + scopeClass.getSimpleName(); // e.g. @RequestScoped
+            List<Bean<?>> beanList = e.getValue();
+
+            int beanCount = beanList.size();
+
+            Integer scopeInstancesSum = 0; // null if context not active
+
+            Context context = null;
+            boolean contextActive = true;
+            try {
+                // Try to obtain the context for this scope; may throw ContextNotActiveException
+                context = beanManager.getContext(scopeClass);
+            } catch (ContextNotActiveException ex) {
+                contextActive = false;
+            } catch (Throwable ex) {
+                // Some implementations may throw different exceptions; treat as not active
+                contextActive = false;
+            }
+
+            if (!contextActive) {
+                // context is not active during this request -> set instances to null
+                scopeInstancesSum = null;
+            } else {
+                // context active: check contextual instance presence for each bean
+                for (Bean<?> bean : beanList) {
+                    Integer instancesForBean = 0;
+                    try {
+                        @SuppressWarnings("unchecked")
+                        Contextual<Object> contextual = (Contextual<Object>) bean;
+                        Object instance = context.get(contextual);
+                        if (instance != null) {
+                            instancesForBean = 1; // CDI context stores single contextual instance per bean
+                        } else {
+                            instancesForBean = 0;
+                        }
+                    } catch (Throwable t) {
+                        // defensive: if anything goes wrong, mark as unknown (null)
+                        instancesForBean = null;
+                    }
+
+                    if (instancesForBean != null && instancesForBean > 0) {
+                        scopeInstancesSum = scopeInstancesSum + instancesForBean;
+                    }
+                }
+            }
+
+            Map<String, Object> scopeSummary = new LinkedHashMap<>();
+            scopeSummary.put("beanCount", beanCount);
+            scopeSummary.put("instances", scopeInstancesSum);
+
+            result.put(scopeKey, scopeSummary);
+        }
+
+        return Response.ok(result).build();
     }
-}
+
     @GET
     @Path("/producers")
     @Produces(MediaType.APPLICATION_JSON)
@@ -129,11 +227,6 @@ private int countBeansByType(String typeName) {
 
         return registry.getProducers().stream()
                 .map(info -> {
-//                    // Count matching beans currently available
-//                    int count = (int) registry.getBeans().stream()
-//                            .filter(b -> b.getBeanClass().getName().equals(info.getProducedType()))
-//                            .count();
-
                     return new ProducerDTO(info);
                 })
                 .toList();
@@ -242,6 +335,65 @@ private int countBeansByType(String typeName) {
         return registry.getBeanGraph();
     }
 
+@GET
+@Path("/bean-graph/{id}")
+public Response getBeanGraphNodeById(@PathParam("id") String id) {
+    guard();
+
+    BeanGraphDTO graph = registry.getBeanGraph();
+    if (graph == null || graph.getNodes() == null) {
+        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity("Bean graph not available")
+                .build();
+    }
+
+    BeanGraphDTO.BeanNode root = graph.getNodes().get(id);
+    if (root == null) {
+        return Response.status(Response.Status.NOT_FOUND)
+                .entity("Bean with id '" + id + "' not found")
+                .build();
+    }
+
+    // Build a subgraph containing only this node + dependencies
+    Map<String, BeanGraphDTO.BeanNode> subgraphNodes = new LinkedHashMap<>();
+    collectRecursive(root, graph.getNodes(), subgraphNodes);
+
+    BeanGraphDTO subgraph = new BeanGraphDTO();
+
+    // add nodes without creating new objects
+    subgraphNodes.forEach((beanId, beanNode) -> {
+        subgraph.addNode(beanId, beanNode.getBeanType(), beanNode.getDescription());
+    });
+
+    // add edges
+    subgraphNodes.forEach((beanId, beanNode) -> {
+        for (BeanGraphDTO.BeanNode dep : beanNode.getDependencies()) {
+            if (subgraphNodes.containsKey(dep.getBeanId())) {
+                subgraph.addDependency(beanId, dep.getBeanId());
+            }
+        }
+    });
+
+    return Response.ok(subgraph).build();
+}
+private void collectRecursive(BeanGraphDTO.BeanNode node,
+                              Map<String, BeanGraphDTO.BeanNode> allNodes,
+                              Map<String, BeanGraphDTO.BeanNode> result) {
+
+    if (result.containsKey(node.getBeanId())) {
+        return; // already processed
+    }
+
+    // Add this node to result
+    result.put(node.getBeanId(), node);
+
+    // Now recursively add dependencies
+    for (BeanGraphDTO.BeanNode dep : node.getDependencies()) {
+        collectRecursive(dep, allNodes, result);
+    }
+}
+
+
     @GET
     @Path("/rest-resources")
     @Produces(MediaType.APPLICATION_JSON)
@@ -257,7 +409,15 @@ private int countBeansByType(String typeName) {
     @Produces(MediaType.APPLICATION_JSON)
     public List<RestMethodDTO> getRestMethods() {
         guard();
-        return registry.getRestMethodInfoMap().values().stream().collect(Collectors.toList());
+
+        return registry.getRestMethodInfoMap().values().stream()
+                .peek(v -> {
+                    int count = restregistry.getMetrics()
+                            .getOrDefault(v.getMethodSignature(), List.of())
+                            .size();
+                    v.setInvoked(count);
+                })
+                .collect(Collectors.toList());
     }
 
     @GET
@@ -303,5 +463,39 @@ private int countBeansByType(String typeName) {
         return annotations.stream().anyMatch(a
                 -> a.annotationType().isAnnotationPresent(jakarta.interceptor.InterceptorBinding.class)
         );
+    }
+
+    
+    @Inject
+    private RestMetricsRegistry restregistry;
+    /**
+     * Return full details for a rest method.  Tries to lookup runtime records from a RestMetricsRegistry bean
+     * if present in the CDI container. The {path} parameter is matched against the stored methodSignature
+     * (declaringClass#methodName) or the registered REST path.
+     */
+    @GET
+    @Path("/rest-methods/{path}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getRestMethodFullByPath(@PathParam("path") String path) {
+        guard();
+
+        // find RestMethodDTO by matching either methodSignature or the configured path
+        RestMethodDTO found = registry.getRestMethodInfoMap().values().stream()
+                .filter(m -> (m.getMethodSignature() != null && m.getMethodSignature().equals(path))
+                        || (m.getPath() != null && m.getPath().equals(path)))
+                .findFirst().orElse(null);
+
+        if (found == null) {
+            throw new NotFoundException();
+        }
+
+        // Build full DTO
+        fish.payara.console.dev.dto.RestMethodFullDTO full = new fish.payara.console.dev.dto.RestMethodFullDTO(
+                found.getMethodSignature(), found.getPath(), found.getHttpMethodAndProduces());
+
+        List<HTTPRecord> records = restregistry.getMetrics().get(found.getMethodSignature());
+        full.setRecords(records);
+        
+        return Response.ok(full).build();
     }
 }

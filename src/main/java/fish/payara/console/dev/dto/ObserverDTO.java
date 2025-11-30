@@ -36,53 +36,48 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.rest.dto;
+package fish.payara.console.dev.dto;
 
-import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 
 /**
- *
+ * Represents a CDI observer method’s metadata for /dev/cdi/observers.
  * @author Gaurav Gupta
  */
-public class EventRecord {
+public class ObserverDTO {
 
-    private final String eventType;
-    private final String firedBy;
-    private final Instant timestamp;
-    private final List<String> resolvedObservers;
+    private final String eventTypeName;
+    private final String beanClass;
+    private final List<String> qualifiers;
+    private final String transactionPhase;
+    private final String reception;
 
-    public EventRecord(String eventType, String firedBy, Instant timestamp, List<String> resolvedObservers) {
-        this.eventType = eventType;
-        this.firedBy = firedBy;
-        this.timestamp = timestamp;
-        this.resolvedObservers = resolvedObservers == null ? Collections.emptyList() : List.copyOf(resolvedObservers);
+    public ObserverDTO(String observedType, String beanClass,
+                             List<String> qualifiers, String transactionPhase, String reception) {
+        this.eventTypeName = observedType;
+        this.beanClass = beanClass;
+        this.qualifiers = qualifiers;
+        this.transactionPhase = transactionPhase;
+        this.reception = reception;
     }
 
-    public String getEventType() {
-        return eventType;
+    public String getEventTypeName() {
+        return eventTypeName;
     }
 
-    public String getFiredBy() {
-        return firedBy;
+    public String getBeanClass() {
+        return beanClass;
     }
 
-    public Instant getTimestamp() {
-        return timestamp;
+    public List<String> getQualifiers() {
+        return qualifiers;
     }
 
-    public List<String> getResolvedObservers() {
-        return resolvedObservers;
+    public String getTransactionPhase() {
+        return transactionPhase;
     }
 
-    @Override
-    public String toString() {
-        return "EventRecord{"
-                + "eventType='" + eventType + '\''
-                + ", firedBy='" + firedBy + '\''
-                + ", timestamp=" + timestamp
-                + ", resolvedObservers=" + resolvedObservers
-                + '}';
+    public String getReception() {
+        return reception;
     }
 }

@@ -36,32 +36,43 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.cdi.demo;
+package fish.payara.console.dev.dto;
 
-import jakarta.ejb.Schedule;
-import jakarta.ejb.Singleton;
-import jakarta.ejb.Startup;
-import jakarta.enterprise.event.Event;
-import jakarta.inject.Inject;
-import java.time.LocalTime;
+import java.time.Instant;
+import java.util.List;
 
 /**
- * Periodically fires CDI events every second for testing the event system.
+ * Represents a fired CDI event for /dev/cdi/events.
+ * @author Gaurav Gupta
  */
-@Singleton
-@Startup
-public class HeartbeatTimer {
+public class EventDTO {
 
-    @Inject
-    private Event<String> messageEvent;
+    private final String eventType;
+    private final String firedBy;
+    private final Instant timestamp;
+    private final List<String> notifiedObservers;
 
-    
-    @Inject
-    @Fast
-    String fastMessage;  
-    
-    @Schedule(second = "*/30", minute = "*", hour = "*", persistent = false)
-    public void sendMessage() {
-        messageEvent.fire("HeartBeat " + LocalTime.now() + " - "+ fastMessage);
+    public EventDTO(String eventType, String firedBy,
+                          Instant timestamp, List<String> notifiedObservers) {
+        this.eventType = eventType;
+        this.firedBy = firedBy;
+        this.timestamp = timestamp;
+        this.notifiedObservers = notifiedObservers;
+    }
+
+    public String getEventType() {
+        return eventType;
+    }
+
+    public String getFiredBy() {
+        return firedBy;
+    }
+
+    public Instant getTimestamp() {
+        return timestamp;
+    }
+
+    public List<String> getNotifiedObservers() {
+        return notifiedObservers;
     }
 }

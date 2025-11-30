@@ -36,39 +36,22 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.rest.dto;
-
-import java.time.Instant;
+package fish.payara.console.dev.model;
 
 /**
  *
  * @author Gaurav Gupta
  */
+public abstract class BeanInfo {
+    
+    protected final String className;
 
-public class ProducerDTO {
-
-    private final String producerClass;    
-    private final String memberSignature;
-    private final String producedType;
-    private final String kind; // FIELD or METHOD
-    private final int producedCount; // how many beans of that type currently exist
-    private final Instant lastProduced;
-
-
-    public ProducerDTO(ProducerInfo info) {
-        this.producerClass = info.getProducerClass();
-        this.memberSignature = info.getMemberSignature();
-        this.producedType = info.getProducedType();
-        this.kind = info.getKind().name();
-        this.producedCount = info.getproducedCount();
-        this.lastProduced = info.getLastProduced();
+    public BeanInfo(String className) {
+        this.className = className;
     }
 
-    // getters
-    public String getProducerClass() { return producerClass; }
-    public String getMemberSignature() { return memberSignature; }
-    public String getProducedType() { return producedType; }
-    public String getKind() { return kind; }
-    public int getproducedCount() { return producedCount; }
-    public Instant getLastProduced() { return lastProduced; }
+    public String getClassName() {
+        return className;
+    }
+
 }

@@ -36,32 +36,34 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.cdi.demo;
+package fish.payara.console.dev.dto;
 
-import jakarta.ejb.Schedule;
-import jakarta.ejb.Singleton;
-import jakarta.ejb.Startup;
-import jakarta.enterprise.event.Event;
-import jakarta.inject.Inject;
-import java.time.LocalTime;
+import fish.payara.console.dev.dto.BeanGraphDTO.BeanNode;
+import jakarta.json.bind.adapter.JsonbAdapter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
- * Periodically fires CDI events every second for testing the event system.
+ *
+ * @author Gaurav Gupta
  */
-@Singleton
-@Startup
-public class HeartbeatTimer {
+public class BeanNodeAdapter implements JsonbAdapter<BeanNode, Map<String, Object>> {
+    public Map<String, Object> adaptToJson(BeanNode beanNode) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("beanId", beanNode.getBeanId());
+        map.put("beanType", beanNode.getBeanType());
+        map.put("description", beanNode.getDescription());
+        List<String> dependencyIds = beanNode.getDependencies().stream()
+            .map(BeanNode::getBeanId)
+            .collect(Collectors.toList());
+        map.put("dependencies", dependencyIds);
+        return map;
+    }
 
-    @Inject
-    private Event<String> messageEvent;
-
-    
-    @Inject
-    @Fast
-    String fastMessage;  
-    
-    @Schedule(second = "*/30", minute = "*", hour = "*", persistent = false)
-    public void sendMessage() {
-        messageEvent.fire("HeartBeat " + LocalTime.now() + " - "+ fastMessage);
+    public BeanNode adaptFromJson(Map<String, Object> map) {
+        // implement if deserialization needed, else throw UnsupportedOperationException
+        throw new UnsupportedOperationException("Deserialization not supported");
     }
 }

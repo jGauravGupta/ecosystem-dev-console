@@ -36,32 +36,40 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.cdi.demo;
+package fish.payara.console.dev.dto;
 
-import jakarta.ejb.Schedule;
-import jakarta.ejb.Singleton;
-import jakarta.ejb.Startup;
-import jakarta.enterprise.event.Event;
-import jakarta.inject.Inject;
-import java.time.LocalTime;
+import fish.payara.console.dev.model.ProducerInfo;
+import java.time.Instant;
 
 /**
- * Periodically fires CDI events every second for testing the event system.
+ *
+ * @author Gaurav Gupta
  */
-@Singleton
-@Startup
-public class HeartbeatTimer {
 
-    @Inject
-    private Event<String> messageEvent;
+public class ProducerDTO {
 
-    
-    @Inject
-    @Fast
-    String fastMessage;  
-    
-    @Schedule(second = "*/30", minute = "*", hour = "*", persistent = false)
-    public void sendMessage() {
-        messageEvent.fire("HeartBeat " + LocalTime.now() + " - "+ fastMessage);
+    private final String className;    
+    private final String memberSignature;
+    private final String producedType;
+    private final String kind; // FIELD or METHOD
+    private final int producedCount; // how many beans of that type currently exist
+    private final Instant lastProduced;
+
+
+    public ProducerDTO(ProducerInfo info) {
+        this.className = info.getClassName();
+        this.memberSignature = info.getMemberSignature();
+        this.producedType = info.getProducedType();
+        this.kind = info.getKind().name();
+        this.producedCount = info.getproducedCount();
+        this.lastProduced = info.getLastProduced();
     }
+
+    // getters
+    public String getClassName() { return className; }
+    public String getMemberSignature() { return memberSignature; }
+    public String getProducedType() { return producedType; }
+    public String getKind() { return kind; }
+    public int getproducedCount() { return producedCount; }
+    public Instant getLastProduced() { return lastProduced; }
 }

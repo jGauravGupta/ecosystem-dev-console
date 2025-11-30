@@ -36,48 +36,29 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.rest.dto;
+package fish.payara.console.dev.model;
 
-import java.util.List;
+import java.time.Instant;
 
 /**
- * Represents a CDI observer method’s metadata for /dev/cdi/observers.
+ *
  * @author Gaurav Gupta
  */
-public class ObserverDTO {
+public class Record {
 
-    private final String eventTypeName;
-    private final String beanClass;
-    private final List<String> qualifiers;
-    private final String transactionPhase;
-    private final String reception;
+    protected final Instant timestamp;
+    protected final long durationMs;
 
-    public ObserverDTO(String observedType, String beanClass,
-                             List<String> qualifiers, String transactionPhase, String reception) {
-        this.eventTypeName = observedType;
-        this.beanClass = beanClass;
-        this.qualifiers = qualifiers;
-        this.transactionPhase = transactionPhase;
-        this.reception = reception;
+    public Record(Instant timestamp, long durationMs) {
+        this.timestamp = timestamp;
+        this.durationMs = durationMs;
     }
 
-    public String getEventTypeName() {
-        return eventTypeName;
+    public Instant getTimestamp() {
+        return timestamp;
     }
 
-    public String getBeanClass() {
-        return beanClass;
-    }
-
-    public List<String> getQualifiers() {
-        return qualifiers;
-    }
-
-    public String getTransactionPhase() {
-        return transactionPhase;
-    }
-
-    public String getReception() {
-        return reception;
+    public long getDurationMs() {
+        return durationMs;
     }
 }

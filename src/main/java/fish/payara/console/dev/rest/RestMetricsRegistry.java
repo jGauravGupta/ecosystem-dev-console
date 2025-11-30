@@ -36,32 +36,32 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.cdi.demo;
+package fish.payara.console.dev.rest;
 
-import jakarta.ejb.Schedule;
-import jakarta.ejb.Singleton;
-import jakarta.ejb.Startup;
-import jakarta.enterprise.event.Event;
-import jakarta.inject.Inject;
-import java.time.LocalTime;
+
+import fish.payara.console.dev.model.HTTPRecord;
+import jakarta.enterprise.context.ApplicationScoped;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.time.Instant;
 
 /**
- * Periodically fires CDI events every second for testing the event system.
+ *
+ * @author Gaurav Gupta
  */
-@Singleton
-@Startup
-public class HeartbeatTimer {
+@ApplicationScoped
+public class RestMetricsRegistry {
 
-    @Inject
-    private Event<String> messageEvent;
+    private final Map<String, List<HTTPRecord>> metrics = new ConcurrentHashMap<>();
 
-    
-    @Inject
-    @Fast
-    String fastMessage;  
-    
-    @Schedule(second = "*/30", minute = "*", hour = "*", persistent = false)
-    public void sendMessage() {
-        messageEvent.fire("HeartBeat " + LocalTime.now() + " - "+ fastMessage);
+    public void addRecord(String endpoint, long durationMs, int status, int requestSize, int responseSize) {
+        metrics.computeIfAbsent(endpoint, k -> new CopyOnWriteArrayList<>())
+                .add(new HTTPRecord(Instant.now(), durationMs, status, requestSize, responseSize));
+    }
+
+    public Map<String, List<HTTPRecord>> getMetrics() {
+        return metrics;
     }
 }

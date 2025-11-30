@@ -36,32 +36,53 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.cdi.demo;
+package fish.payara.console.dev.model;
 
-import jakarta.ejb.Schedule;
-import jakarta.ejb.Singleton;
-import jakarta.ejb.Startup;
-import jakarta.enterprise.event.Event;
-import jakarta.inject.Inject;
-import java.time.LocalTime;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
 
 /**
- * Periodically fires CDI events every second for testing the event system.
+ *
+ * @author Gaurav Gupta
  */
-@Singleton
-@Startup
-public class HeartbeatTimer {
+public class EventRecord {
 
-    @Inject
-    private Event<String> messageEvent;
+    private final String eventType;
+    private final String firedBy;
+    private final Instant timestamp;
+    private final List<String> resolvedObservers;
 
-    
-    @Inject
-    @Fast
-    String fastMessage;  
-    
-    @Schedule(second = "*/30", minute = "*", hour = "*", persistent = false)
-    public void sendMessage() {
-        messageEvent.fire("HeartBeat " + LocalTime.now() + " - "+ fastMessage);
+    public EventRecord(String eventType, String firedBy, Instant timestamp, List<String> resolvedObservers) {
+        this.eventType = eventType;
+        this.firedBy = firedBy;
+        this.timestamp = timestamp;
+        this.resolvedObservers = resolvedObservers == null ? Collections.emptyList() : List.copyOf(resolvedObservers);
+    }
+
+    public String getEventType() {
+        return eventType;
+    }
+
+    public String getFiredBy() {
+        return firedBy;
+    }
+
+    public Instant getTimestamp() {
+        return timestamp;
+    }
+
+    public List<String> getResolvedObservers() {
+        return resolvedObservers;
+    }
+
+    @Override
+    public String toString() {
+        return "EventRecord{"
+                + "eventType='" + eventType + '\''
+                + ", firedBy='" + firedBy + '\''
+                + ", timestamp=" + timestamp
+                + ", resolvedObservers=" + resolvedObservers
+                + '}';
     }
 }

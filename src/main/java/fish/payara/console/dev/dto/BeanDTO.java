@@ -36,32 +36,35 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.cdi.demo;
-
-import jakarta.ejb.Schedule;
-import jakarta.ejb.Singleton;
-import jakarta.ejb.Startup;
-import jakarta.enterprise.event.Event;
-import jakarta.inject.Inject;
-import java.time.LocalTime;
+package fish.payara.console.dev.dto;
 
 /**
- * Periodically fires CDI events every second for testing the event system.
+ * Bean Data Transfer Object to represent beans in a structured way for API responses.
  */
-@Singleton
-@Startup
-public class HeartbeatTimer {
+public class BeanDTO {
+    private String id;
+    private String beanType;
+    private String description;
+    private String scope;
 
-    @Inject
-    private Event<String> messageEvent;
+    public BeanDTO(Object bean) {
+        this.description = bean.toString();
+        this.beanType = bean.getClass().getName();
+    }
 
-    
-    @Inject
-    @Fast
-    String fastMessage;  
-    
-    @Schedule(second = "*/30", minute = "*", hour = "*", persistent = false)
-    public void sendMessage() {
-        messageEvent.fire("HeartBeat " + LocalTime.now() + " - "+ fastMessage);
+    public String getBeanType() {
+        return beanType;
+    }
+
+    public void setBeanType(String beanType) {
+        this.beanType = beanType;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }

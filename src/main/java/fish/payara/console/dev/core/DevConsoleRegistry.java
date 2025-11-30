@@ -38,12 +38,14 @@
  */
 package fish.payara.console.dev.core;
 
-import fish.payara.console.dev.cdi.dto.BeanGraphDTO;
-import fish.payara.console.dev.rest.dto.DecoratorInfo;
-import fish.payara.console.dev.rest.dto.EventRecord;
-import fish.payara.console.dev.rest.dto.InterceptorInfo;
-import fish.payara.console.dev.rest.dto.ProducerInfo;
-import fish.payara.console.dev.rest.dto.RestMethodDTO;
+import fish.payara.console.dev.model.Record;
+import fish.payara.console.dev.model.InstanceStats;
+import fish.payara.console.dev.dto.BeanGraphDTO;
+import fish.payara.console.dev.model.DecoratorInfo;
+import fish.payara.console.dev.model.EventRecord;
+import fish.payara.console.dev.model.InterceptorInfo;
+import fish.payara.console.dev.model.ProducerInfo;
+import fish.payara.console.dev.dto.RestMethodDTO;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.spi.*;
 import java.lang.annotation.Annotation;
@@ -52,6 +54,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+/**
+ *
+ * @author Gaurav Gupta
+ */
 @ApplicationScoped
 public class DevConsoleRegistry {
 
@@ -72,8 +78,48 @@ public class DevConsoleRegistry {
     private final BeanGraphDTO beanGraph = new BeanGraphDTO();
 
     // Event monitoring structures
-    private static final int DEFAULT_EVENT_HISTORY = 10000;
+    private static final int DEFAULT_EVENT_HISTORY = 1000;
     private final Deque<EventRecord> recentEvents = new ConcurrentLinkedDeque<>();
+
+    private final ConcurrentHashMap<Class<?>, InstanceStats> statsMap = new ConcurrentHashMap<>();
+
+    public void recordCreation(Class<?> beanClass, long ms) {
+        InstanceStats stats = statsMap.computeIfAbsent(beanClass, c -> new InstanceStats());
+        int live = stats.getCurrentCount().incrementAndGet();
+        stats.getCreatedCount().incrementAndGet();
+        stats.getLastCreated().set(Instant.now());
+        stats.getMaxCount().updateAndGet(prevMax -> Math.max(prevMax, live));
+        stats.getCreationRecords().add(new Record(Instant.now(), ms));
+    }
+
+    public void recordDestruction(Class<?> beanClass, long ms) {
+        InstanceStats stats = statsMap.get(beanClass);
+        if (stats != null) {
+            stats.getCurrentCount().decrementAndGet();
+            stats.getDestroyedCount().incrementAndGet();
+            stats.getDestructionRecords().add(new Record(Instant.now(), ms));
+        }
+    }
+
+    public InstanceStats getStats(Class<?> beanClass) {
+        return statsMap.getOrDefault(beanClass, new InstanceStats());
+    }
+
+    public int getCurrent(Class<?> beanClass) {
+        return getStats(beanClass).getCurrentCount().get();
+    }
+
+    public int getMax(Class<?> beanClass) {
+        return getStats(beanClass).getMaxCount().get();
+    }
+
+    public int getDestroyed(Class<?> beanClass) {
+        return getStats(beanClass).getDestroyedCount().get();
+    }
+
+    public int getTotalCreated(Class<?> beanClass) {
+        return getStats(beanClass).getCreatedCount().get();
+    }
 
     public void addDecorator(AnnotatedType decorator) {
         decorators.add(DecoratorInfo.fromAnnotatedType(decorator));
@@ -150,9 +196,9 @@ public class DevConsoleRegistry {
     }
 
     void registerBean(Bean<?> bean) {
-        beans.put(bean.toString(), bean);
+        beans.put(bean.getBeanClass().getName(), bean);
         // Add bean as node in the graph
-        beanGraph.addNode(bean.toString(), bean.getBeanClass().getName(), bean.toString());
+        beanGraph.addNode(bean.getBeanClass().getName(), bean.getBeanClass().getName(), bean.toString());
     }
 
     private final Map<jakarta.enterprise.inject.spi.AnnotatedType<?>, String> restResourcePaths = new ConcurrentHashMap<>();
@@ -175,15 +221,11 @@ public class DevConsoleRegistry {
 
     public <T> void addRestMethodPathWithProduces(jakarta.enterprise.inject.spi.AnnotatedMethod<? super T> am, String path, String produces, String httpMethod) {
         if (am != null) {
-            RestMethodDTO restMethodDTO = new RestMethodDTO();
-            restMethodDTO.setPath(path);
             String httpMethodAndProduces = (httpMethod != null ? httpMethod : "") + (produces != null ? " (produces: " + produces + ")" : "");
-            restMethodDTO.setHttpMethodAndProduces(httpMethodAndProduces);
             String methodName = am.getJavaMember().getName();
-
             String declaringClass = am.getDeclaringType().getJavaClass().getName();
             String methodId = declaringClass + "#" + methodName;
-            restMethodDTO.setMethodSignature(methodId);
+            RestMethodDTO restMethodDTO = new RestMethodDTO(methodId, path, httpMethodAndProduces);
             restMethodInfoMap.put(am, restMethodDTO);
             beanGraph.addNode(methodId, methodName + " " + httpMethodAndProduces, "REST Method");
         }
@@ -234,12 +276,12 @@ public class DevConsoleRegistry {
             return;
         }
         for (Bean<?> bean : beans.values()) {
-            String fromId = bean.toString();
+            String fromId = bean.getBeanClass().getName();
             // Check injection points
             for (InjectionPoint ip : bean.getInjectionPoints()) {
                 Bean<?> injectedBean = bm.resolve(bm.getBeans(ip.getType(), ip.getQualifiers().toArray(new Annotation[0])));
                 if (injectedBean != null) {
-                    String toId = injectedBean.toString();
+                    String toId = injectedBean.getBeanClass().getName();
                     beanGraph.addDependency(fromId, toId);
                 }
             }

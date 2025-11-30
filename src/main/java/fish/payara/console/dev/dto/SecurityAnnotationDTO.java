@@ -36,43 +36,35 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.rest.dto;
+package fish.payara.console.dev.dto;
 
-import java.time.Instant;
-import java.util.List;
+import java.lang.annotation.Annotation;
+import java.util.Set;
 
-/**
- * Represents a fired CDI event for /dev/cdi/events.
- * @author Gaurav Gupta
- */
-public class EventDTO {
+public class SecurityAnnotationDTO {
+    private String key;
+    private Set<String> annotationClassNames;
 
-    private final String eventType;
-    private final String firedBy;
-    private final Instant timestamp;
-    private final List<String> notifiedObservers;
-
-    public EventDTO(String eventType, String firedBy,
-                          Instant timestamp, List<String> notifiedObservers) {
-        this.eventType = eventType;
-        this.firedBy = firedBy;
-        this.timestamp = timestamp;
-        this.notifiedObservers = notifiedObservers;
+    public SecurityAnnotationDTO(String key, Set<Annotation> annotations) {
+        this.key = key;
+        this.annotationClassNames = annotations.stream()
+                .map(annotation -> annotation.annotationType().getName())
+                .collect(java.util.stream.Collectors.toSet());
     }
 
-    public String getEventType() {
-        return eventType;
+    public String getKey() {
+        return key;
     }
 
-    public String getFiredBy() {
-        return firedBy;
+    public void setKey(String key) {
+        this.key = key;
     }
 
-    public Instant getTimestamp() {
-        return timestamp;
+    public Set<String> getAnnotationClassNames() {
+        return annotationClassNames;
     }
 
-    public List<String> getNotifiedObservers() {
-        return notifiedObservers;
+    public void setAnnotationClassNames(Set<String> annotationClassNames) {
+        this.annotationClassNames = annotationClassNames;
     }
 }

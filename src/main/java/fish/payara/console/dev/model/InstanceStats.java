@@ -36,32 +36,53 @@
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
-package fish.payara.console.dev.cdi.demo;
+package fish.payara.console.dev.model;
 
-import jakarta.ejb.Schedule;
-import jakarta.ejb.Singleton;
-import jakarta.ejb.Startup;
-import jakarta.enterprise.event.Event;
-import jakarta.inject.Inject;
-import java.time.LocalTime;
+import java.time.Instant;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Periodically fires CDI events every second for testing the event system.
+ *
+ * @author Gaurav Gupta
  */
-@Singleton
-@Startup
-public class HeartbeatTimer {
+public class InstanceStats {
 
-    @Inject
-    private Event<String> messageEvent;
+    private final AtomicInteger currentCount = new AtomicInteger();
+    private final AtomicInteger createdCount = new AtomicInteger();
+    private final AtomicInteger maxCount = new AtomicInteger();
+    private final AtomicInteger destroyedCount = new AtomicInteger();
+    private final AtomicReference<Instant> lastCreated = new AtomicReference<>(null);
+    private final List<Record> creationRecords = new CopyOnWriteArrayList<>();
+    private final List<Record> destructionRecords = new CopyOnWriteArrayList<>();
 
-    
-    @Inject
-    @Fast
-    String fastMessage;  
-    
-    @Schedule(second = "*/30", minute = "*", hour = "*", persistent = false)
-    public void sendMessage() {
-        messageEvent.fire("HeartBeat " + LocalTime.now() + " - "+ fastMessage);
+    public AtomicInteger getCurrentCount() {
+        return currentCount;
+    }
+
+    public AtomicInteger getMaxCount() {
+        return maxCount;
+    }
+
+    public AtomicInteger getDestroyedCount() {
+        return destroyedCount;
+    }
+
+    public AtomicInteger getCreatedCount() {
+        return createdCount;
+    }
+
+    public AtomicReference<Instant> getLastCreated() {
+        return lastCreated;
+    }
+
+    public List<Record> getCreationRecords() {
+        return creationRecords;
+    }
+
+    public List<Record> getDestructionRecords() {
+        return destructionRecords;
     }
 }

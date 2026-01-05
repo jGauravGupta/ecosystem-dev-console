@@ -28,5 +28,4 @@ public class InterceptorFullDTO extends InterceptorDTO {
         this.invocationRecords = invocationRecords;
     }
 
-
 }

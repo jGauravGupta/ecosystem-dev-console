@@ -42,10 +42,8 @@ package fish.payara.console.dev.dto;
  * Bean Data Transfer Object to represent beans in a structured way for API responses.
  */
 public class BeanDTO {
-    private String id;
     private String beanType;
     private String description;
-    private String scope;
 
     public BeanDTO(Object bean) {
         this.description = bean.toString();

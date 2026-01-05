@@ -40,4 +40,15 @@ public class DevConsoleBeansTest extends DevConsoleDeployment {
             assertTrue(bean.containsKey("alternative"));
         }
     }
+
+    @Test
+    public void injection_points_schema_is_valid() {
+        JsonArray ips = getJsonArray("/dev/injection-points");
+
+        if (!ips.isEmpty()) {
+            JsonObject ip = ips.getJsonObject(0);
+            assertTrue(ip.containsKey("declaringBean"));
+            assertTrue(ip.containsKey("status"));
+        }
+    }
 }

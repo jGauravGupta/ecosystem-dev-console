@@ -26,13 +26,21 @@ public class DevConsoleRestTest extends DevConsoleDeployment {
     }
 
     @Test
-    public void injection_points_schema_is_valid() {
-        JsonArray ips = getJsonArray("/dev/injection-points");
+    public void rest_method_full_endpoint_returns_records_array() {
+        JsonArray methods = getJsonArray("/dev/rest-methods");
 
-        if (!ips.isEmpty()) {
-            JsonObject ip = ips.getJsonObject(0);
-            assertTrue(ip.containsKey("declaringBean"));
-            assertTrue(ip.containsKey("status"));
+        if (!methods.isEmpty()) {
+            JsonObject m = methods.getJsonObject(0);
+
+            String path = m.getString("methodSignature", null);
+            if (path != null) {
+                JsonObject full = getJsonObject("/dev/rest-methods/" + path);
+
+                assertTrue(full.containsKey("records"));
+                assertTrue(full.get("records").getValueType()
+                        == jakarta.json.JsonValue.ValueType.ARRAY);
+            }
         }
     }
+
 }
